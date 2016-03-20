@@ -1,4 +1,3 @@
-from random import choice
 from utils.plugin_framework import Command
 from utils import hook
 
@@ -11,4 +10,4 @@ class Test(Command):
         print('Test')
 
     def call(self, *args, **kwargs):
-        print(choice('Test'))
+        print('Test')
