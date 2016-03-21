@@ -1,5 +1,8 @@
 from importlib.util import find_spec
 from importlib import import_module
+
+import asyncio
+
 from utils.logging import log
 import os
 
@@ -22,14 +25,14 @@ class PluginMount(type):
 
 
 class Command(metaclass=PluginMount):
-    def __init__(self):
-        self._enabled = True
+    def __init__(self, enabled=True):
+        self._enabled = enabled
 
     def help(self):
         """
         Return a string of command information
         """
-        raise NotImplementedError('A command should implement the help method.')
+        return 'This command has no information.'
 
     def call(self, *args, **kwargs):
         """
@@ -53,12 +56,58 @@ class Command(metaclass=PluginMount):
         self._enabled = b
 
     @staticmethod
-    def get_commands(*args, **kwargs):
-        return {p.args['name']: p(*args, **kwargs) for p in Command.plugins}
+    def get_commands():
+        return {p.__name__: p for p in Command.plugins}
 
     @staticmethod
     def exists(command):
-        return command in [p.args['name'] for p in Command.plugins]
+        for p in Command.plugins:
+            if hasattr(p, 'args'):
+                if 'variants' in p.args and command in p.args['variants']:
+                    return True
+        return False
+
+
+class Handler(metaclass=PluginMount):
+    def __init__(self, client):
+        self.client = client
+
+    def handle(self, msg):
+        raise NotImplementedError
+
+    def trigger(self, trig, *args, **kwargs):
+        if '<catch_all>' in self.triggers:
+            for method in self.triggers['<catch_all>']:
+                method(*args, **kwargs)
+
+        if trig in self.triggers:
+            for method in self.triggers[trig]:
+                method(*args, **kwargs)
+        elif '<catch_unknown>' in self.triggers:
+            for method in self.triggers['<catch_unknown>']:
+                method(*args, **kwargs)
+        else:
+            log('Unknown trigger {0}.', trig)
+
+
+class Client(metaclass=PluginMount):
+    args = ()
+
+    def __init__(self, conn_cls):
+        self._con_cls = conn_cls
+        self._connection = None
+
+    def connect(self, host, **kwargs):
+        self._connection = self._con_cls(self, host, **kwargs)
+
+        return asyncio.Task(self._connection.connect())
+
+    def on_connect(self):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_clients():
+        return {client.__name__: client for client in Client.plugins}
 
 
 def find_plugins():
@@ -88,3 +137,4 @@ def load_all_plugins():
     log('Loading plugins:')
     for plugin in find_plugins():
         load_plugin(plugin)
+    log('Done loading plugins')
