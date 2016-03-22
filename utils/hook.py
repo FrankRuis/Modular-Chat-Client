@@ -2,12 +2,12 @@ from utils.plugin_framework import Command
 from utils.logging import log
 
 
-def command(*variants, **kwargs):
+def command(*variants, split=None, **kwargs):
     for variant in variants:
         if Command.exists(variant):
             log('\t\tThere already exists a command with the name {:s}.', variant)
 
-    args = {'variants': [variant for variant in list(variants) if not Command.exists(variant)]}
+    args = {'variants': [variant for variant in list(variants) if not Command.exists(variant)], 'split': split}
     args.update(kwargs)
 
     def command_wrapper(cls):

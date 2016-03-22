@@ -1,34 +1,66 @@
 from utils.plugin_framework import Handler, log, Command
 from utils.hook import trigger, collect_triggers
+import re
+
+action = '\1ACTION'
 
 
 @collect_triggers
 class IRCHandler(Handler):
     def handle(self, msg):
-        parts = msg.decode().split()
-        if len(parts) > 1:
-            if parts[0].startswith(':'):
-                self.trigger(parts[1], self, parts[1:])
-            else:
-                self.trigger(parts[0], self, parts)
+        message = IRCMessage(msg)
+        self.trigger(message.command, self, message)
 
     @trigger('PING')
-    def pong(self, parts):
-        self.client.send(('PONG ' + ' '.join(parts[1:])).encode())
+    def pong(self, message):
+        self.client.send(('PONG ' + message.params).encode())
 
     @trigger('PRIVMSG')
-    def test(self, parts):
-        msg = ' '.join(parts[2:])[1:]
+    def test(self, message):
+        msg = message.message
         if msg.startswith('!'):
             for command in Command.get_plugins():
-                params = msg.split()
-                if params[0][1:] in command.args['variants']:
-                    if parts[1] == 'kaascroissant':
-                        parts[1] = '#kekkels'
-                    self.client.send('PRIVMSG {:s} :{:s}\r\n'.format(parts[1], command.call(*params[1:])).encode())
+                try:
+                    cmd, params = msg.split(maxsplit=1)
+                except ValueError:
+                    cmd, params = msg, ''
+                if cmd[1:] in command.args['variants']:
+                    self.client.send('PRIVMSG {:s} :{:s}\r\n'
+                                     .format(message.target, command.call(*params.split(command.args['split'])))
+                                     .encode())
 
-        log(' '.join(parts))
+    @trigger(catch_all=True)
+    def catch_unknown(self, message):
+        print(message.raw)
 
-    @trigger(catch_unknown=True)
-    def catch_all(self, parts):
-        log(' '.join(parts))
+
+class IRCMessage:
+    def __init__(self, raw):
+        msg = raw.decode()
+        self.raw = raw
+        if msg.startswith(':'):
+            self.prefix, self.command, self.params = msg.split(maxsplit=2)
+        else:
+            self.prefix = ''
+            self.command, self.params = msg.split(maxsplit=1)
+
+    @property
+    def sender(self):
+        if self.prefix:
+            result = re.compile(r':(.*?)($|!)').match(self.prefix)
+            return result.group(1) if result else None
+        else:
+            return ''
+
+    @property
+    def target(self):
+        split = self.params.split()
+        return split[0] if split else ''
+
+    @property
+    def message(self):
+        split = self.params.split(maxsplit=1)
+        if len(split) > 1:
+            return split[1][1:].strip()
+        else:
+            return ''

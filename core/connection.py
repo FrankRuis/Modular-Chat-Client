@@ -1,5 +1,3 @@
-from abc import ABCMeta, abstractmethod
-from utils.logging import log
 from utils.plugin_framework import Handler
 import asyncio
 

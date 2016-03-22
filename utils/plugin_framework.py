@@ -86,7 +86,7 @@ class Handler(metaclass=PluginMount):
         elif '<catch_unknown>' in self.triggers:
             for method in self.triggers['<catch_unknown>']:
                 method(*args, **kwargs)
-        else:
+        elif not '<catch_all>' in self.triggers:
             log('Unknown trigger {0}.', trig)
 
 
