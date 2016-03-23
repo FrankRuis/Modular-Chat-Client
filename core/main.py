@@ -69,7 +69,7 @@ class MainWindow(QtGui.QMainWindow):
                 port = int(port)
                 self.client.connect(host, port=port, ssl=ssl)
             except ValueError:
-                QtGui.QMessageBox.about(self, 'Error','port should be an integer.')
+                QtGui.QMessageBox.about(self, 'Error','Port should be an integer.')
 
 if __name__ == '__main__':
     load_all_plugins()
