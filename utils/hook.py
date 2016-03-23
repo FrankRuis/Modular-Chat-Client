@@ -20,8 +20,10 @@ def command(*variants, split=None, **kwargs):
     return command_wrapper
 
 
-def client_args(*args):
+def client_args(*args, **kwargs):
     def wrapper(cls):
+        if 'msg_size' in kwargs:
+            cls.msg_size = kwargs['msg_size']
         cls.args = args
         return cls
 

@@ -1,3 +1,4 @@
+from PyQt4 import QtGui, QtCore
 from importlib.util import find_spec
 from importlib import import_module
 
@@ -93,14 +94,32 @@ class Handler(metaclass=PluginMount):
 class Client(metaclass=PluginMount):
     args = ()
 
-    def __init__(self, conn_cls):
+    def __init__(self, conn_cls, gui):
+        self.window = gui
         self._con_cls = conn_cls
         self._connection = None
+        self._chats = {}
 
     def connect(self, host, **kwargs):
         self._connection = self._con_cls(self, host, **kwargs)
+        item = QtGui.QTreeWidgetItem(self.window.ui.treeWidget)
+        item.setText(0, host)
 
         return asyncio.Task(self._connection.connect())
+
+    def add_chat(self, name):
+        tab = QtGui.QWidget()
+        tab.setObjectName(name)
+        vertical_layout = QtGui.QVBoxLayout(tab)
+        vertical_layout.setMargin(11)
+        vertical_layout.setMargin(6)
+        text_edit = QtGui.QTextEdit(tab)
+        self._chats[name] = text_edit
+        text_edit.setTextInteractionFlags(QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
+        vertical_layout.addWidget(text_edit)
+        line_edit = QtGui.QLineEdit(tab)
+        vertical_layout.addWidget(line_edit)
+        self.window.ui.tabWidget.addTab(tab, name)
 
     def on_connect(self):
         raise NotImplementedError

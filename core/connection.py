@@ -36,4 +36,12 @@ class Connection:
         self._connected = False
 
     def send(self, msg):
+        if isinstance(msg, str):
+            msg = msg.encode()
+        elif not isinstance(msg, bytes):
+            raise ValueError('Message should be bytes.')
+
+        if hasattr(self.client, 'msg_size') and len(msg) > self.client.msg_size:
+            raise ValueError('Message may not exceed {:d} bytes.'.format(self.client.msg_size))
+
         self._writer.write(msg)

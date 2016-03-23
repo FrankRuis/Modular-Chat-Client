@@ -13,11 +13,12 @@ class IRCHandler(Handler):
 
     @trigger('PING')
     def pong(self, message):
-        self.client.send(('PONG ' + message.params).encode())
+        self.client.send(('PONG ' + message.params))
 
     @trigger('PRIVMSG')
     def test(self, message):
         msg = message.message
+        """
         if msg.startswith('!'):
             for command in Command.get_plugins():
                 try:
@@ -26,18 +27,20 @@ class IRCHandler(Handler):
                     cmd, params = msg, ''
                 if cmd[1:] in command.args['variants']:
                     self.client.send('PRIVMSG {:s} :{:s}\r\n'
-                                     .format(message.target, command.call(*params.split(command.args['split'])))
-                                     .encode())
+                                     .format(message.target, command.call(*params.split(command.args['split']))))
+        """
+        self.client.append_message(message.target, message.sender, msg)
 
     @trigger(catch_all=True)
     def catch_unknown(self, message):
-        print(message.raw)
+        log(message.raw)
 
 
 class IRCMessage:
     def __init__(self, raw):
         msg = raw.decode()
         self.raw = raw
+
         if msg.startswith(':'):
             self.prefix, self.command, self.params = msg.split(maxsplit=2)
         else:
