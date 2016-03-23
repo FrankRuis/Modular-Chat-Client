@@ -1,3 +1,6 @@
+from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
+
 from utils.plugin_framework import Handler, log, Command
 from utils.hook import trigger, collect_triggers
 import re
@@ -16,9 +19,9 @@ class IRCHandler(Handler):
         self.client.send(('PONG ' + message.params))
 
     @trigger('PRIVMSG')
-    def test(self, message):
+    def privmsg(self, message):
         msg = message.message
-        """
+        self.client.append_message(message.target, message.sender, msg)
         if msg.startswith('!'):
             for command in Command.get_plugins():
                 try:
@@ -26,10 +29,23 @@ class IRCHandler(Handler):
                 except ValueError:
                     cmd, params = msg, ''
                 if cmd[1:] in command.args['variants']:
+                    result = command.call(*params.split(command.args['split']))
                     self.client.send('PRIVMSG {:s} :{:s}\r\n'
-                                     .format(message.target, command.call(*params.split(command.args['split']))))
-        """
-        self.client.append_message(message.target, message.sender, msg)
+                                     .format(message.target, result))
+                    self.client.append_message(message.target, self.client.nick, result)
+
+    @trigger('JOIN')
+    def join(self, message):
+        item = QtGui.QListWidgetItem(self.client.window.ui.listWidget)
+        item.setText(message.sender)
+
+    @trigger('353')
+    def names(self, message):
+        for name in message.params.split(':')[1].split():
+            items = self.client.window.ui.listWidget.findItems(name.strip(), Qt.MatchExactly)
+            if not items:
+                item = QtGui.QListWidgetItem(self.client.window.ui.listWidget)
+                item.setText(name.strip())
 
     @trigger(catch_all=True)
     def catch_unknown(self, message):

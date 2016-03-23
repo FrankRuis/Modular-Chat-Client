@@ -19,7 +19,6 @@ class ClientIRC(Client):
             self.send('PASS {:s}\r\n'.format(self._password))
         self.send('NICK {:s}\r\n'.format(self.nick))
         self.send('USER {:s} 0 * :{:s}\n\r'.format(self.nick, self.real_name))
-        self.join('#test-irc-client')
 
     def join(self, channel):
         items = self.window.ui.treeWidget.findItems('irc.freenode.org', Qt.MatchExactly, 0)
@@ -28,6 +27,9 @@ class ClientIRC(Client):
             item.setText(0, channel)
         self.send('JOIN {:s}\n\r'.format(channel))
         self.add_chat(channel)
+
+    def leave(self, channel):
+        self.send('PART {:s}\n\r'.format(channel))
 
     def append_message(self, target, sender, message):
         if target in self._chats:

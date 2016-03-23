@@ -3,6 +3,7 @@ import sys
 
 import asyncio
 from PyQt4 import QtGui
+from PyQt4.QtCore import Qt
 from quamash import QEventLoop
 
 from core.connection import Connection
@@ -22,10 +23,43 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowTitle('Chat Client')
         self.ui.actionConnect_2.triggered.connect(self.connect)
+        self.ui.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.ui.treeWidget.customContextMenuRequested.connect(self.open_menu)
 
         client = Client.get_clients()['ClientIRC']
-        self.client = client(Connection, self, 'kaascroissant')
+        self.client = client(Connection, self, 'rdpTestBot')
+
+    def open_menu(self, position):
+        indexes = self.ui.treeWidget.selectedIndexes()
+        if len(indexes) > 0:
+            level = 0
+            index = indexes[0]
+            while index.parent().isValid():
+                index = index.parent()
+                level += 1
+
+            menu = QtGui.QMenu()
+            if level == 0:
+                join = menu.addAction(self.tr("Join channel"))
+                disconnect = menu.addAction(self.tr("Disconnect"))
+                join.triggered.connect(self.join)
+            elif level == 1:
+                leave = menu.addAction(self.tr("Leave channel"))
+                leave.triggered.connect(lambda: self.leave(self.ui.treeWidget.itemFromIndex(indexes[0])))
+
+            menu.exec_(self.ui.treeWidget.viewport().mapToGlobal(position))
+
+    def leave(self, item):
+        self.client.leave(item.text(0))
+        self.ui.tabWidget.removeTab(self.ui.tabWidget.indexOf(self.client._chats[item.text(0)].parent()))
+        item.parent().removeChild(item)
+
+    def join(self):
+        channel, ok = QtGui.QInputDialog.getText(self, 'Join channel', 'Channel name:')
+        if ok:
+            self.client.join(channel)
 
     def connect(self):
         dialog = ConnectDialog()
